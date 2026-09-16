@@ -52,9 +52,8 @@ Regular Markdown text is written for the reader. R code belongs inside an R code
 The chunk below performs a simple calculation.
 
 ```{r first-calculation}
-5 + 2 * 3
+5 + 2 * 4
 ```
-
 
 Try changing the expression and running the chunk again.
 
