@@ -36,21 +36,38 @@ file for information about the variables and measurements.
 
 ```{r setup questions 1-2, message = FALSE}
 #1a 
+library(tidyverse)
+library(here)
 
 
 #1b 
-
+getwd()
 
 #1c 
-
+EPA.O3.2024 <- read.csv(
+  file=here("Data/Raw/EPAair_O3_NC2024_raw.csv")
+)
+EPA.O3.2025 <- read.csv(
+  file=here("Data/Raw/EPAair_O3_NC2025_raw.csv")
+)
+EPA.PM25.2024 <- read.csv(
+  file=here("Data/Raw/EPAair_PM25_NC2024_raw.csv")
+)
+EPA.PM25.2025 <- read.csv(
+  file=here("Data/Raw/EPAair_PM25_NC2025_raw.csv")
+)
 
 #2 
-
+dim(EPA.O3.2024)
+dim(EPA.O3.2025)
+dim(EPA.PM25.2024)
+dim(EPA.PM25.2025)
 
 ```
 
 > All four datasets should have the same number of columns (PM2.5 has one extra column),
 but unique record counts (rows). Do your datasets follow this pattern?
+Yes
 
 ## Wrangle individual datasets to create processed files.
 
@@ -66,13 +83,30 @@ AQS.Parameter.Description, County, Site.Latitude, Site.Longitude
 
 ```{r questions 3 thru 5}
 #3
-
+EPA.O3.2024$Date <- mdy(EPA.O3.2024$Date)
+EPA.O3.2025$Date <- mdy(EPA.O3.2025$Date)
+EPA.PM25.2024$Date <- mdy(EPA.PM25.2024$Date)
+EPA.PM25.2025$Date <- mdy(EPA.PM25.2025$Date)
 
 #4
-
+EPA.O3.2024 <- EPA.O3.2024 %>% 
+  select(Date, Daily.AQI.Value, Local.Site.Name, 
+         AQS.Parameter.Description, County, Site.Latitude, Site.Longitude)
+EPA.O3.2025 <- EPA.O3.2025 %>% 
+  select(Date, Daily.AQI.Value, Local.Site.Name, 
+         AQS.Parameter.Description, County, Site.Latitude, Site.Longitude)
+EPA.PM25.2024 <- EPA.PM25.2024 %>% 
+  select(Date, Daily.AQI.Value, Local.Site.Name, 
+         AQS.Parameter.Description, County, Site.Latitude, Site.Longitude)
+EPA.PM25.2025 <- EPA.PM25.2025 %>% 
+  select(Date, Daily.AQI.Value, Local.Site.Name, 
+         AQS.Parameter.Description, County, Site.Latitude, Site.Longitude)
 
 #5
-
+EPA.PM25.2024 <- EPA.PM25.2024 %>% 
+  mutate(AQS.Parameter.Description = "PM2.5")
+EPA.PM25.2025 <- EPA.PM25.2025 %>% 
+  mutate(AQS.Parameter.Description = "PM2.5")
 
 ```
 
@@ -82,7 +116,26 @@ AQS.Parameter.Description, County, Site.Latitude, Site.Longitude
 
 ```{r question 6}
 #6 
-
+write.csv(
+  EPA.O3.2024, 
+  row.names = FALSE,
+  file = here("Data/Processed/EPAair_O3_NC2024_Processed.csv")
+)
+write.csv(
+  EPA.O3.2025, 
+  row.names = FALSE,
+  file = here("Data/Processed/EPAair_O3_NC2025_Processed.csv")
+)
+write.csv(
+  EPA.PM25.2024, 
+  row.names = FALSE,
+  file = here("Data/Processed/EPAair_PM25_NC2024_Processed.csv")
+)
+write.csv(
+  EPA.PM25.2025, 
+  row.names = FALSE,
+  file = here("Data/Processed/EPAair_PM25_NC2025_Processed.csv")
+)
 
 ```
 
@@ -96,7 +149,12 @@ identical first.
 
 ```{r question 7}
 #7 
+names(EPA.O3.2024)
+names(EPA.O3.2025)
+names(EPA.PM25.2024)
+names(EPA.PM25.2025)
 
+Air_Quality <- bind_rows(EPA.O3.2024, EPA.O3.2025, EPA.PM25.2024, EPA.PM25.2025)
 
 ```
 
@@ -125,6 +183,25 @@ following conditions:
 ```{r question 8}
 #8 
 
+daily.site.level <- 
+  Air_Quality %>% 
+  filter(Local.Site.Name %in% c("Linville Falls", "Durham Armory", "Leggett", "Hattie Avenue",  
+  "Clemmons Middle", "Mendenhall School", "Frying Pan Mountain", 
+  "West Johnston Co.", "Garinger High School", "Castle Hayne", 
+  "Pitt Agri. Center", "Bryson City", "Millbrook School")
+  ) %>% 
+  group_by(Date, Local.Site.Name, AQS.Parameter.Description, County) %>%
+  summarize(meanAQI = mean(Daily.AQI.Value, na.rm = TRUE),
+            meanLAT = mean(Site.Latitude, na.rm = TRUE),
+            meanLON = mean(Site.Longitude, na.rm = TRUE),
+            .groups = "drop"
+            ) %>% 
+  mutate(Month = month(Date), 
+         Year = year(Date)
+    )
+
+  class(daily.site.level$Month)
+  class(daily.site.level$Year)
 
 ```
 
@@ -138,9 +215,15 @@ columns. Each location-date combination should occupy one row.
 ```{r questions 9-10}
 #9
 
+daily.site.level.wide <- 
+  daily.site.level %>%
+  pivot_wider(
+    names_from = AQS.Parameter.Description,
+    values_from = meanAQI
+    )
 
 #10
-
+dim(daily.site.level.wide)
 
 ```
 
@@ -150,7 +233,11 @@ columns. Each location-date combination should occupy one row.
 
 ```{r question 11}
 #11
-
+write.csv(
+  daily.site.level.wide, 
+  row.names = FALSE,
+  file = here("Data/Processed/EPAair_O3_PM25_NC2425_Processed.csv.csv")
+)
 
 ```
 
@@ -167,10 +254,17 @@ missing. Mean PM2.5 may remain missing.
 
 ```{r questions 12 and 13}
 #12
-
-
+monthly.summary <- 
+  daily.site.level.wide %>% 
+  group_by(Local.Site.Name, Month, Year) %>%
+  summarize(meanOZ = mean(Ozone, na.rm = TRUE),
+            meanPM25 = mean(PM2.5, na.rm = TRUE),
+            .groups = "drop"
+            ) %>% 
+  drop_na(meanOZ)
+  
 #13
-
+dim(monthly.summary)
 
 ```
 
@@ -179,4 +273,18 @@ missing. Mean PM2.5 may remain missing.
 14. Why is `drop_na(mean_ozone)` more appropriate here than `na.omit()`? Test
 both approaches and compare the dimensions of the resulting summary data frames.
 
+```{r questions 14}
+monthly.summary2 <- 
+  daily.site.level.wide %>% 
+  group_by(Local.Site.Name, Month, Year) %>%
+  summarize(meanOZ = mean(Ozone, na.rm = TRUE),
+            meanPM25 = mean(PM2.5, na.rm = TRUE),
+            .groups = "drop"
+            ) %>% 
+  na.omit(meanOZ)
+
+dim(monthly.summary2)
+```
+
 > Answer: 
+The na.omit() function omits the entire row if there is one NA value even if we specify what column we want omitted if there is a NA value. Thus, with na.omit there is 234 rows but with drop_na there is 238 rows. drop_na is just not showing rows that have a NA value in the meanOZ column, but na.omit is not showing an additional 4 rows where there is a NA value for meanPM25, which we want to show. 
