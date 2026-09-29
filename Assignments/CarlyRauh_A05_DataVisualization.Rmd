@@ -1,0 +1,323 @@
+---
+title: "Assignment 5: Data Visualization"
+author: "Carly Rauh"
+output: pdf_document
+geometry: margin=2.54cm
+fig_height: 3
+fig_width: 4
+editor_options: 
+  chunk_output_type: console
+---
+
+## OVERVIEW
+
+This assignment accompanies the Environmental Data Analytics module on data
+visualization. You will create, format, combine, and interpret plots using
+environmental datasets. Your goal is not only to produce correct code, but also
+to make deliberate choices about themes, color, accessibility, and the message
+communicated by each figure.
+
+## Directions
+1. Rename this file `<FirstLast>_A05_DataVisualization.Rmd` (replacing `<FirstLast>` with your first and last name).
+2. Change "Student Name" on line 3 (above) with your name.
+3. Work through the steps, **creating code and output** that fulfill each instruction.
+4. Be sure your code is tidy; use line breaks to ensure your code fits in the knitted output.
+5. Be sure to **answer the questions** in this assignment document.
+6. When you have completed the assignment, **Knit** the text and code into a single PDF file.
+7. All figures should include clear labels and units, readable text, and color
+   choices appropriate for the type of variable displayed. Do not rely on color
+   alone when another cue (such as shape, linetype, or facets) would make the
+   figure more accessible.
+8. Complete your own code before using AI in the designated comparison activity
+   in Question 7. Include the prompt and your evaluation of the AI response.
+
+---
+
+## Set up your session 
+
+1. Set up your session. Load the `tidyverse`, `here`, `cowplot`, and any color
+palette package(s) you choose to use. Verify your project directory. Read in the
+processed NTL-LTER nutrients and chemistry/physics file for Peter and Paul Lakes
+(`NTL-LTER_Lake_Chemistry_Nutrients_PeterPaul_Processed.csv`) and the processed
+Niwot Ridge litter file (`NEON_NIWO_Litter_mass_trap_Processed.csv`) from the
+`Processed_KEY` folder.
+
+2. Make sure R is reading dates as date format; if not change the format to date.
+
+```{r initialize project}
+#1 
+library(tidyverse)
+library(here)
+library(cowplot)
+
+getwd()
+
+Lake.Chemistry <- read.csv(
+  file=here("Data/Processed_KEY/NTL-LTER_Lake_Chemistry_Nutrients_PeterPaul_Processed.csv")
+)
+
+Niwot.Ridge.Litter <- read.csv(
+  file=here("Data/Processed_KEY/NEON_NIWO_Litter_mass_trap_Processed.csv")
+)
+
+#2 
+class(Lake.Chemistry$sampledate)
+Lake.Chemistry$sampledate <- ymd(Lake.Chemistry$sampledate)
+class(Lake.Chemistry$sampledate)
+
+class(Niwot.Ridge.Litter$collectDate)
+Niwot.Ridge.Litter$collectDate<- ymd(Niwot.Ridge.Litter$collectDate)
+class(Niwot.Ridge.Litter$collectDate)
+
+```
+
+## Define your theme
+3. Build a theme and set it as your default theme. Start with a complete theme,
+such as `theme_minimal()` or `theme_classic()`, and then customize at least two
+of the following:
+ * Plot background
+ * Plot title
+ * Axis labels
+ * Axis ticks/gridlines
+ * Legend
+
+Choose a base font size that will remain readable when the plots are knitted.
+Briefly identify the two or more elements you changed and explain how the
+changes improve readability.
+
+```{r build plot theme}
+#3
+
+new_theme <- theme_minimal(base_size = 12) +
+  theme(
+    plot.title.position = "plot",
+    plot.title = element_text(color ="black", face = "bold", size = 15),
+    axis.title = element_text(color = "black", face = "bold"),
+    panel.grid.minor = element_blank(),
+    legend.position = "bottom",
+    legend.title = element_text(color = "black", face = "bold")
+  )
+
+```
+
+> Theme choices and rationale:
+For my theme I chose a base size font of 12 to retain readablity of plots. I moved the plot title position to "plot" so that it would be on the right side of the figure, this way the title doesn't distract from the figure. I changed the plot title to be the color black, bold, and a size of 15 so that it would be larger and stand out more. I also changed the axis titles to be the color black and bold so they would stand out. I removed minor panel grids to make it easier to see where points fall in relation to each other just with the major gridlines. I also moved the legend to be at the bottom of the figure and made the title of the legend bold, which makes the legend easier to read alongside the plot. 
+
+## Create graphs
+For Questions 4–7, create `ggplot2` graphs and adjust their aesthetics using
+data-visualization best practices. Match the color palette to the variable type,
+label variables and units clearly, and remove formatting that does not support
+the comparison.
+
+4. [NTL-LTER] Plot total phosphorus (`tp_ug`) by phosphate (`po4`), using
+separate aesthetics for Peter and Paul lakes. Do not rely only on color: also
+use shape, linetype, facets, or another appropriate visual cue. Add a separate
+line of best fit for each lake using the `lm` method. Zoom in so that the central
+pattern is visible without deleting the extreme observations from the analysis
+(hint: use `coord_cartesian()` rather than `xlim()` or `ylim()`). Include a
+descriptive title, axis labels with units, and a meaningful legend title.
+
+```{r plot total P vs PO4}
+#4 
+
+phosphorus.phosphate.plot <- Lake.Chemistry %>% 
+  ggplot(aes(x = po4, y = tp_ug, color = lakename, shape = lakename)) +
+  scale_color_brewer(palette = "Set1", name = "Lake Name") +
+  geom_point(size = 0.9, alpha = 0.7) +
+  geom_smooth(method = "lm", formula = y ~ x, show.legend = FALSE, se = TRUE,
+              linewidth = 0.8
+              ) +
+  coord_cartesian(xlim = c(0, 375), ylim = c(0, 200)) +
+  labs(title = "Relationship Between Total Phosphorus and Phosphate at 
+Paul and Peter Lake is Similar", 
+       x = "Phosphate (µg P/L)",
+       y = "Total Phosphorus (µg P/L)",
+       shape = "Lake Name",
+) +
+  new_theme
+
+phosphorus.phosphate.plot
+
+```
+
+Question: What relationship do you observe between phosphate and total
+phosphorus? Does the relationship appear to differ between lakes? Identify any
+extreme observations and explain why zooming with `coord_cartesian()` is
+preferable to removing them with scale limits.
+
+> Answer:
+Phosphate and total phosphorus have a positive relationship. As phosphate increases, total phosphorus also increases, however the values for both phosphate and total phosphorus are generally lower: under 100 µg P/L for phosphate and under 150 µg P/L for total phosphorus. The exception to this is one outlier observation for paul lake that has a high phosphate value (around 370 µg P/L) and a low total phosphorus value (around 75 µg P/L). The relationship is similar for both lakes, but Peter Lake does have a steeper line of best fit meaning it has slightly higher total phosphrous values at a lower phosphate value, but the line of best fit curve for Paul Lake is impacted by its outlier. 
+We used coord_cartesian() over xlim()` or `ylim() because it changes the scale of our plot without removing data points. If we zoomed in using xlim()` or `ylim() it would remove the outlier and change the line of best fit instead of retaining the data while still getting a more zoomed in plot with coord_cartesian(). 
+
+5. [NTL-LTER] Make three separate boxplots of (a) temperature, (b) TP, and (c)
+TN, with month on the x-axis and lake represented by a consistent aesthetic.
+Use a qualitative, color-vision-friendly palette. Then create a `cowplot` that
+combines the three graphs. Make sure that only one legend is present, the month
+order is correct, graph axes are aligned, and each y-axis states the variable
+and units.
+
+Tips:
+* Month should appear in calendar, not alphabetical, order. You will need to convert 
+to factor to order it.
+* Setting an axis title in your theme to `element_blank()` removes the axis title (useful when multiple, aligned plots use the same axis values)
+* Setting a legend's position to "none" will remove the legend from a plot.
+* Individual plots can have different sizes when combined using `cowplot`.
+
+```{r Create boxplots}
+#5 
+
+# a. temperature boxplot 
+temp_boxplot <- Lake.Chemistry %>%
+  mutate(Month = factor(format(sampledate, "%B"), levels = month.name)) %>%
+  ggplot(aes(x = Month, y = temperature_C, fill = lakename)) +
+  geom_boxplot(width = 0.9, alpha = 0.8, outlier.alpha = 0.5) +
+  scale_fill_brewer(palette = "Set1") +
+  labs(
+    title = "Differences in Temperature, Total Phosphorus, and 
+Total Nitrogen in Paul and Peter Lake",
+    x = "Month",
+    y = "Temperature C°"
+    ) +
+  new_theme +
+  theme(legend.position = "none", axis.title.x = element_blank())
+
+temp_boxplot
+
+# b. TP Boxplot 
+
+TP_boxplot <- Lake.Chemistry %>%
+  mutate(Month = factor(format(sampledate, "%B"), levels = month.name)) %>%
+  ggplot(aes(x = Month, y = tp_ug, fill = lakename)) +
+  geom_boxplot(width = 0.9, alpha = 0.8, outlier.alpha = 0.4) +
+  scale_fill_brewer(palette = "Set1") +
+  labs(
+    x = "Month",
+    y = "Total Phosphorus (µg P/L)"
+    ) +
+  new_theme +
+  theme(legend.position = "none", axis.title.x = element_blank())
+
+TP_boxplot
+
+# c. TN Boxplot 
+
+TN_boxplot <- Lake.Chemistry %>%
+  mutate(Month = factor(format(sampledate, "%B"), levels = month.name)) %>%
+  ggplot(aes(x = Month, y = tn_ug, fill = lakename)) +
+  geom_boxplot(width = 0.9, alpha = 0.8, outlier.alpha = 0.4) +
+  scale_fill_brewer(palette = "Set1") +
+  labs(
+    x = "Month",
+    y = "Total Nitrogen (mg N/L)",
+    fill = "Lake Name"
+    ) +
+  new_theme 
+
+TN_boxplot
+
+```
+
+```{r fig.width=8, fig.height=10}
+
+# combined figure 
+plot_grid(temp_boxplot, TP_boxplot, TN_boxplot,  ncol = 1,
+  align = "v")
+
+```
+Question: What do you observe about the center, spread, and potential outliers
+of each variable across seasons and between lakes? Support your interpretation
+with specific features visible in the boxplots.
+
+> Answer: For temperature, both Peter and Paul Lake have similar centers and spreads each month with no outliers in any month. The boxplots show trends in seasonality like warming in the summer and cooling in the Fall/Winter (temperatures decrease). For example, November has a small range around 5 degrees celcius for both lakes. For total phosphorus, Peter and Paul Lake have similar centers and spread, but Peter Lake overall has a slightly higher center and a slightly larger range or spread of the data for each month than Paul Lake. Both have significant outliers and are right-skewed, with Peter Lake having higher outliers seen in June, July, and August. Overall seasonality is shown in an increased range of phosphorus in the warmer summer months, which could be due to an increase in anaerobic decomposition releasing more nutrients. For total nitrogen, the pattern is similar to total phosphorus. The center and spreads of both lakes are similar with Peter Lake have a slightly higher median and slightly larger range, which is apparent in the summer months June, July, and August. Both lakes have many outliers, with Peter Lake being more right-skewed than Paul Lake. 
+
+6. [Niwot Ridge] Subset the litter dataset to the `"Needles"` functional group.
+Plot dry mass of needle litter by date and distinguish NLCD classes using a
+qualitative color aesthetic. You do not need to rename the land-use classes.
+Format the date axis, labels, legend, point size, and transparency so that
+overlapping observations remain visible.
+
+7. [Niwot Ridge] First, independently create a second version of the plot with
+the three NLCD classes separated into facets rather than distinguished by color.
+Keep other formatting choices as consistent as possible so that you can compare
+the effect of faceting itself.
+
+```{r Plot litter}
+#6
+
+needle.dry.mass.plot <- Niwot.Ridge.Litter %>% 
+  filter(functionalGroup == "Needles") %>% 
+  ggplot(aes(x = collectDate, y = dryMass, color = nlcdClass)) +
+  scale_color_brewer(palette = "Set1", name = "NLCD Class") +
+  geom_point(size = 1, alpha = 0.5) +
+  labs(title = "Needle Litter Dry Mass of NLCD Classes Over Collection Period", 
+       x = "Collect Date",
+       y = "Dry Mass (g)"
+) +
+  new_theme
+  
+needle.dry.mass.plot
+
+#7
+
+needle.plot.facet <- Niwot.Ridge.Litter %>% 
+  filter(functionalGroup == "Needles") %>% 
+  ggplot(aes(x = collectDate, y = dryMass, color = nlcdClass)) +
+  scale_color_brewer(palette = "Set1", name = "NLCD Class") +
+  geom_point(size = 1, alpha = 0.5) +
+  facet_wrap(vars(nlcdClass),nrow=3) +
+  labs(title = "Needle Litter Dry Mass of NLCD Classes Over Collection Period", 
+       x = "Collect Date",
+       y = "Dry Mass (g)"
+) +
+  new_theme
+
+needle.plot.facet
+
+```
+
+## AI comparison
+
+8. After completing your own faceted plot, provide an AI tool with the Question 7 instructions and the relevant variable names. Ask it to propose `ggplot2` code for the same figure. Do **not** replace your original solution with the AI version.
+
+Paste the exact prompt you used below:
+
+> AI tool used: ChatGPT
+
+> AI prompt: Create code for a ggplot based on these instructions: Plot dryMass of needle litter by collectDate and separate three nlcdClass into facets rather than distinguishing by color. The dataset is called "Niwot.Ridge.Litter" and subset into the "Needles" functionalGroup. You do not need to rename the land-use classes. Format the date axis, labels, legend, point size, and transparency so that overlapping observations remain visible.
+
+Run and inspect the AI-generated code, correcting only errors required to make
+it run. If you make corrections, identify them. Then compare the two solutions.
+
+```{r AI solution}
+# Paste the AI-generated code here. Clearly comment any corrections you make.
+
+facet.plot <- Niwot.Ridge.Litter %>% 
+  filter(functionalGroup == "Needles") %>% 
+  ggplot(aes(x = collectDate, y = dryMass)) +
+  geom_point(size = 1.5, alpha = 0.5) +
+  facet_wrap(~ nlcdClass, nrow = 3) +
+  labs(
+    x = "Collection Date",
+    y = "Dry Mass",
+    title = "Needle Litter Dry Mass by Collection Date"
+  ) +
+  scale_x_date(date_labels = "%b %Y") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    strip.text = element_text(size = 11),
+    plot.title = element_text(hjust = 0.5)
+  )
+
+facet.plot
+
+```
+
+9. Which plot—your solution or the AI solution—more effectively communicates the data? Evaluate at least three specific choices, such as data filtering, facet structure, date-axis formatting, labels and units, theme, accessibility, or unnecessary code. Identify one useful idea from the AI
+solution and one choice you would reject or improve. If the solutions are very similar, explain why both approaches are appropriate.
+
+> AI comparison: I think my plot more effectively communicates the data compared to the AI version, while they are similar plots there are some differences between mine and the AI version that I think makes the AI version harder to interpret. The first choice that helps the accessibility of the plot is my choise to make labels and titles bold on my plot. This makes the different axis stand out and it is very clear where things are on the plot and what each label means. The AI labels are also smaller in addition to being plain text so they don't stand out. The second choice is the unnecessary code in the AI version, which relates to some of the style choices it made. There is extra theme code to angle the X axis labels which I think is unnecessary and doesn't do much for the plot. Thirdly, the AI code converted the collection date axis labels into the month and year, not just the year. I think this is slightly confusing since the data was not just collected in January but throughout the years shown, but that is what it appears to be according to the AI code. One idea I might take from the AI version to improve my own code would be to increase the size of the points to 1.5, I do like how it is easier to see the points on the AI plot. 
+
+10. Question: Which encoding in Questions 6 and 7—color or facets—do you think is more effective for comparing NLCD classes, and why? Consider overlap, ease of comparison, accessibility, and the amount of space used by each figure.
+
+> Answer: I think it is easier to compare the NLCD classes in the facet plot. I think the color plot can be useful for comparing the classes all on the same scale and plot, but it is harder to see patterns within individual classes. From the facet panel plot we can see the panel of each classification and compare those to the other classes or to the same class over the years. Having only the overlap of one group makes it easier to see the amount of points in a single panel/plot versus having the overlap of different colors, which can be hard to see where one color ends and another begins or if two colors are on top of each other and what colors are there. Although I kept my facet plot in color to not change much of the formatting if the plot was black and white it would be more accessibile for those who are color blind or have a hard time distinguishing colors. 
