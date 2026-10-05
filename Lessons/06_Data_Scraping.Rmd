@@ -16,6 +16,7 @@ editor_options:
 ## Set up
 ```{r, message = FALSE}
 library(tidyverse)
+library(lubridate)
 library(here); here()
 
 #install.packages("rvest")
@@ -106,13 +107,13 @@ In the code chunk below, see if you can extract the Facility Name and Facility T
 
 ```{r scraping.exercise.1}
 the_facility_name <- webpage %>% 
-  html_nodes() %>% 
+  html_nodes("tr:nth-child(2) th+ .left:nth-child(2)") %>% 
   html_text()
 the_facility_name
 
-the_facility_type <- webpage  
-  
-  
+the_facility_type <- webpage %>% 
+  html_nodes("tr:nth-child(2) .left~ .left+ td.left") %>% 
+  html_text()
 the_facility_type
 ```
 
@@ -172,7 +173,7 @@ This begins by setting the parameters of the page we'll be scraping to variables
 #Construct the scraping web address, i.e. its URL
 the_base_url <- 'https://www.ncwater.org/WUDC/app/WWATR/report/view'
 the_facility <- '0004-0001'
-the_year <- 2020
+the_year <- 2015
 the_scrape_url <- paste0(the_base_url, '/', the_facility, '/', the_year)
 print(the_scrape_url)
 
@@ -204,7 +205,7 @@ df_withdrawals <- data.frame("Month" = c(1,7,2,8,3,9,4,10,5,11,6,12), #<--NOTE: 
 ggplot(df_withdrawals,aes(x=Date,y=Avg_Withdrawals_mgd)) + 
   geom_line() + 
   geom_smooth(method="loess",se=FALSE) +
-  labs(title = paste("2020 Water usage data for",the_registrant),
+  labs(title = paste("2015 Water usage data for",the_registrant),
        subtitle = the_facility_name,
        y="Withdrawal (mgd)",
        x="Date")
@@ -247,7 +248,7 @@ scrape.it <- function(the_year, the_facility){
            Date = my(paste(Month,"-",Year)))
   
   #Pause for a moment - scraping etiquette
-  #Sys.sleep(1) #uncomment this if you are doing bulk scraping!
+  Sys.sleep(1) #uncomment this if you are doing bulk scraping!
   
   #Return the dataframe
   return(df_withdrawals)
